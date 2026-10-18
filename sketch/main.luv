@@ -1,0 +1,79 @@
+let Vector2 = struct {
+    x float,
+    y float,
+};
+
+fun Vector2.length(self) float {
+    return std.math.sqrt(
+        self.x * self.x + self.y * self.y
+    );
+}
+
+let Option = enum[T] {
+    None,
+    Some T,
+}
+
+fun Option[T].orElse(*self, value T) T {
+    return match self.tag {
+        None -> value,
+        Some -> self.as.some,
+    };
+}
+
+let Maybe = struct[T] {
+    tag enum { None, Just },
+    as union { none nil, just T },
+}
+
+fun Maybe[T].None() Maybe[T] {
+    return Maybe[T] {
+        tag = None,
+        as = { none = nil },
+    };
+}
+
+fun Maybe[T].Some(thing T) Maybe[T] {
+    return Option[T] {
+        tag = Just,
+        as = { just = thing },
+    };
+}
+
+fun main() {
+# Actual program
+    var a = try malloc[int](1); 
+    defer free(a);
+
+    var b = try malloc[int](1);
+    errdefer free(b);
+
+    a.* = 10;
+    b.* = 10;
+
+    b.* = try add(b, a);
+
+    return Ok(b);
+
+
+# The C-like behavior
+    var a *int;
+    var t1 = malloc[int](1);
+    if (t1.tag == Err) return t1;
+    a = t1.as.ok;
+
+    var b *int;
+    var t2 = malloc[int](1);
+    if (t2.tag == Err) { free(a); return t2; }
+    b = t2.as.ok;
+
+    a.* = 10;
+    b.* = 10;
+
+    var t3 = add(a, b);
+    if (t3.tag == Err) { free(b); free(a); return t3; }
+    b = t3.as.ok;
+
+    free(a);
+    return b.*;
+}
